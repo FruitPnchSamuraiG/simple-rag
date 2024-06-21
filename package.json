@@ -6,6 +6,9 @@
     "cheerio": "^1.0.0-rc.12",
     "duck-duck-scrape": "^2.2.5",
     "langchain": "^0.2.5",
-    "puppeteer": "^19.11.1"
+    "natural": "^7.0.6",
+    "nltk": "^0.0.1",
+    "puppeteer": "^19.11.1",
+    "stopword": "^3.0.1"
   }
 }

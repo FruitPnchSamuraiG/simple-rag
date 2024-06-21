@@ -1,6 +1,6 @@
 import { OllamaEmbeddings } from "@langchain/community/embeddings/ollama";
 import { MemoryVectorStore } from "langchain/vectorstores/memory";
-import { load } from 'cheerio';
+import { load } from "cheerio";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { CheerioWebBaseLoader } from "@langchain/community/document_loaders/web/cheerio";
 import { ChatOllama } from "@langchain/community/chat_models/ollama";
@@ -9,45 +9,114 @@ import { PromptTemplate } from "@langchain/core/prompts";
 import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
 import { PuppeteerWebBaseLoader } from "@langchain/community/document_loaders/web/puppeteer";
 
+// // scraping the web
+// const loader = new PuppeteerWebBaseLoader(
+//   "https://en.wikipedia.org/wiki/Sekiro:_Shadows_Die_Twice",
+//   {
+//     launchOptions: {
+//       headless: false,
+//     },
+//     gotoOptions: {
+//       waitUntil: "domcontentloaded",
+//     },
+//     /**  Pass custom evaluate , in this case you get page and browser instances */
+//     async evaluate(page, browser) {
+//       const html = await page.content();
+//       const $ = load(html);
+
+//       // Extract text from specific elements and clean it
+//       let textElements = $(
+//         "h1, h2, h3, div, p, span, li, a"
+//       )
+//         .map((i, el) => $(el).text())
+//         .get()
+//         .join(" ");
+
+//       // Additional cleaning
+//       textElements = textElements
+//         .replace(/\s+/g, " ")
+//         .trim(); // Remove extra spaces
+
+//       await browser.close();
+//       return textElements;
+//     },
+//   }
+// );
+
+// // loading the scraped docs
+// let docs = await loader.load();
+// console.log(docs);
+
+import natural from "natural";
+import { removeStopwords } from "stopword";
+
+const tokenizer = new natural.WordTokenizer();
+const stemmer = natural.PorterStemmer;
+
+// Preprocessing function to clean and filter text
+const preprocessText = (text) => {
+  return text.replace(/\s+/g, " ").trim();
+  // // Tokenize text
+  // let tokens = tokenizer.tokenize(text.toLowerCase());
+
+  // // Remove stopwords
+  // tokens = removeStopwords(tokens);
+
+  // // Perform stemming
+  // tokens = tokens.map((token) => stemmer.stem(token));
+
+  // // Join tokens back into a single string
+  // return tokens.join(" ");
+};
+
+// Function to scrape and clean content
+const scrapeContent = async (url) => {
+  const loader = new PuppeteerWebBaseLoader(url, {
+    launchOptions: { headless: true },
+    gotoOptions: { waitUntil: "domcontentloaded" },
+    async evaluate(page, browser) {
+      const html = await page.content();
+      const $ = load(html);
+
+      // Extract and clean text from relevant tags
+      let textElements = $("div, p, span, li, a")
+        .map((i, el) => preprocessText($(el).text()))
+        .get()
+        .join(" ");
+
+      await browser.close();
+      return textElements;
+    },
+  });
+
+  return await loader.load();
+};
+
+// Scrape content from the given URL
+const docs = await scrapeContent(
+  "https://en.wikipedia.org/wiki/Sekiro:_Shadows_Die_Twice"
+);
+console.log(docs);
+
 // initializing ollama model
 const ollama = new ChatOllama({
   baseUrl: "http://localhost:11434", // Default value
   model: "qwen2:1.5b", // Default value
 });
 
-// scraping the web
-const loader = new PuppeteerWebBaseLoader("https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer", {
-  launchOptions: {
-    headless: false,
-  },
-  gotoOptions: {
-    waitUntil: "domcontentloaded",
-  },
-  /**  Pass custom evaluate , in this case you get page and browser instances */
-  async evaluate(page, browser) {
-    const html = await page.content();
-    const $ = load(html);
-    const textElements = $('div,p, h1, h2, h3, h4, h5, h6, ul, ol,li').text();
-    await browser.close();
-    return textElements;
-  },
-});
-
-// loading the scraped docs
-let docs = await loader.load();
-console.log(docs);
-
 // splitting it into relevant chunks
 const textSplitter = new RecursiveCharacterTextSplitter({
-  chunkSize: 200,
+  chunkSize: 500,
   chunkOverlap: 50,
 });
+
 const allSplits = await textSplitter.splitDocuments(docs);
+// console.log(allSplits);
 
 // generating embeddings for the same
 const embeddings = new OllamaEmbeddings({
   baseUrl: "http://127.0.0.1:11434",
-  model: "mxbai-embed-large",
+  model: "all-minilm",
 });
 const vectorStore = await MemoryVectorStore.fromDocuments(
   allSplits,
@@ -56,7 +125,7 @@ const vectorStore = await MemoryVectorStore.fromDocuments(
 
 // prompt template
 const prompt = PromptTemplate.fromTemplate(
-  "Summarize the following: {context}"
+  "this is my question : {question} answer from the context below: \n{context}"
 );
 
 // defining the chain
@@ -66,9 +135,12 @@ const chain = await createStuffDocumentsChain({
   prompt,
 });
 
-const question = "Explain ArrayBuffers";
-const searchResults = await vectorStore.similaritySearch(question);
-console.log("Search Results: ",searchResults);
+// const question = "Explain the 3 types of ending in sekiro";
+const question = "Who is emma in sekiro";
+const searchResults = await vectorStore.similaritySearch(
+  question
+);
+console.log("Search Results: ", searchResults);
 console.log(
   await chain.invoke({
     question: question,
