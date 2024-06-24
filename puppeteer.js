@@ -8,45 +8,6 @@ import { StringOutputParser } from "@langchain/core/output_parsers";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
 import { PuppeteerWebBaseLoader } from "@langchain/community/document_loaders/web/puppeteer";
-
-// // scraping the web
-// const loader = new PuppeteerWebBaseLoader(
-//   "https://en.wikipedia.org/wiki/Sekiro:_Shadows_Die_Twice",
-//   {
-//     launchOptions: {
-//       headless: false,
-//     },
-//     gotoOptions: {
-//       waitUntil: "domcontentloaded",
-//     },
-//     /**  Pass custom evaluate , in this case you get page and browser instances */
-//     async evaluate(page, browser) {
-//       const html = await page.content();
-//       const $ = load(html);
-
-//       // Extract text from specific elements and clean it
-//       let textElements = $(
-//         "h1, h2, h3, div, p, span, li, a"
-//       )
-//         .map((i, el) => $(el).text())
-//         .get()
-//         .join(" ");
-
-//       // Additional cleaning
-//       textElements = textElements
-//         .replace(/\s+/g, " ")
-//         .trim(); // Remove extra spaces
-
-//       await browser.close();
-//       return textElements;
-//     },
-//   }
-// );
-
-// // loading the scraped docs
-// let docs = await loader.load();
-// console.log(docs);
-
 import natural from "natural";
 import { removeStopwords } from "stopword";
 
@@ -56,6 +17,7 @@ const stemmer = natural.PorterStemmer;
 // Preprocessing function to clean and filter text
 const preprocessText = (text) => {
   return text.replace(/\s+/g, " ").trim();
+
   // // Tokenize text
   // let tokens = tokenizer.tokenize(text.toLowerCase());
 
@@ -135,8 +97,7 @@ const chain = await createStuffDocumentsChain({
   prompt,
 });
 
-// const question = "Explain the 3 types of ending in sekiro";
-const question = "Who is emma in sekiro";
+const question = "Explain the 3 types of ending in sekiro";
 const searchResults = await vectorStore.similaritySearch(
   question
 );
