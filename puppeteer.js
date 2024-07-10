@@ -51,7 +51,7 @@ const scrapeContent = async (url) => {
     },
   });
 
-  return await loader.load();
+  return loader.load();
 };
 
 // Scrape content from the given URL
