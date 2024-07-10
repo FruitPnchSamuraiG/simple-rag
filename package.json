@@ -5,9 +5,11 @@
     "axios": "^1.7.2",
     "cheerio": "^1.0.0-rc.12",
     "duck-duck-scrape": "^2.2.5",
+    "faiss-node": "^0.5.1",
     "langchain": "^0.2.5",
     "natural": "^7.0.6",
     "nltk": "^0.0.1",
+    "pdf-parse": "^1.1.1",
     "puppeteer": "^19.11.1",
     "stopword": "^3.0.1"
   }
